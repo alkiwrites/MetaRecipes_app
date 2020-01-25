@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <title>MetaRecipesAPI by Alki</title>
+
+   <!-- BT4 -->
+ <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
+ <!-- fuentes -->
+ <link href="https://fonts.googleapis.com/css?family=Bangers&display=swap" rel="stylesheet">
+
+
+</head>
+<body>
+
+<style>
+   #grid  {
+          margin : 0;
+          padding: 30px 10px;
+   }
+
+   /* la barra */
+   #barra {
+       background-color: #dee66d;
+       padding: 10px;
+   }
+
+   /* la barra de span */
+   #barra span {
+      font-size: 1.4rem;
+      padding: 5px;
+      color: #fff;
+      margin: 4px 10px;
+      font-family: 'Bangers', cursive;
+      text-shadow: 1px 3px 17px;
+
+   } 
+
+   #barra input {
+       width: 40%;
+       height: 40px;
+   }
+
+   #lanzar {
+       margin-left: 10px;
+       border-radius: 10px;
+       background-color: #fff;
+       opacity: 0.7;
+       color: #000;
+       line-height: 27px;
+       height: 40px;
+   }
+
+</style>
+ 
+<!-- fin de la barra de contenedor -->
+ <div id="barra" class="container">
+     <div class="row">
+         <span>Ingredient</span>
+         <input type="text" id="target" value="avocado" placeholder="ingredient">
+         <a href="#!" class="btn" type="button" id="lanzar">buscar</a>
+     </div>
+ </div>
+
+  <!--  el grid  -->
+   <div id="wrap" class="container">
+        <div id="grid" class="row">  
+        </div>
+   </div>   
+
+   <!-- // cargamos los scripts -->
+   <script src="jquery.js"></script>
+   <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+
+<script>
+const doc  = document;  
+const grid = doc.getElementById('grid'); // grid
+// hooks buttons
+let lanzar = doc.getElementById('lanzar');
+let target = doc.getElementById('target');
+
+// the api key
+const llave = '&apiKey=e586395a35724ee281df6fbc348f79e0';
+
+// click search
+lanzar.addEventListener('click', (e)=>{
+    grid.innerHTML = ''; // empty 
+    let id = target.value;  
+    // Build URL 
+    let URL = 'https://api.spoonacular.com/recipes/search?query=' + id + '&number=5' + llave;
+    // make request
+    getData( URL , (res)=>{
+            // parse
+            let recetas = res.results;  
+            let base    = res.baseUri; 
+            //  loop 
+            recetas.forEach((ele) => {
+                // creamos el item  
+                crear_item( ele.id,
+                            base+ele.image,
+                            ele.title,
+                            (card)=>{   // llamamos
+                                    grid.append(card); // agregamos al grid
+                            }); 
+            }); // end loop
+        });  // en get
+});
+
+// hook to dinamically create cards button
+doc.addEventListener('click', (ele)=>{
+    if(ele.target.classList.contains('linkReceta') ) {  // check for verdad
+         let URL = ele.target.href; 
+         // get data after parse
+         getData( URL , (res)=>{        
+             // build the thing
+              let obj = {
+                            id           :  res.id,
+                            image        :  res.image,    
+                            title        :  res.title,
+                            vegan        :  res.vegan,
+                            vegetarian   :  res.vegetarian,
+                            instructions :  res.instructions,  // lñas intrucciones
+                            minutos      :  res.readyInMinutes // minutos  apreparacion
+                        };
+                        // make the display
+                        hacerDisplay( obj , (data)=>{
+                            grid.innerHTML = '';  // set
+                            grid.append(data); // add data
+                        });
+         });
+         ele.preventDefault(); // prevenimos
+    } else {
+        ele.preventDefault();
+    }
+});
+
+ // get data fronm from URL
+function getData( URL , callback ) {
+            var xhttp = new XMLHttpRequest();  // make
+            xhttp.onreadystatechange = function() { // check
+                if (this.readyState == 4 && this.status == 200) {
+                    callback(JSON.parse(this.responseText));  // callback response as JSON
+                } 
+            };
+            xhttp.open('GET', URL , true); // ready
+            xhttp.setRequestHeader('Content-Type', 'application/json'); // set   
+            xhttp.send(); // go! LOl
+ }
+
+// creador de itenes
+function crear_item(id,image,title,callback) {
+        // la card 
+        let card = doc.createElement('div');
+        card.id = id; // set id
+        card.classList.add('col-4');  
+        card.style.margin = '14px 0';
+
+        // card-image
+        let cardImage = doc.createElement('div');
+        cardImage.classList.add('card-image');
+        let img = doc.createElement('img');
+        img.src = image; // el src
+        img.alt = 'receta';
+        img.style.width = '80%';
+        cardImage.appendChild(img);
+
+        // el card content
+        let cardContent = doc.createElement('div');
+        cardContent.classList.add('card-content');
+        let  p = doc.createElement('p');
+        p.textContent = title; // agregamos contenido
+        cardContent.appendChild(p); 
+
+        // hacmeo el botton
+        let link  = doc.createElement('a');
+        link.classList.add('linkReceta');
+        link.classList.add('btn');
+        link.classList.add('btn-primary');
+        link.style.margin = '10px auto';
+        // el link lo haceos a parftir del id
+        link.href = 'https://api.spoonacular.com/recipes/' + id + '/information?includeNutrition=false' + llave;
+        link.type = 'button';
+        link.textContent = 'ver receta';
+
+        // build card
+        card.appendChild(cardImage);
+        card.appendChild(cardContent);
+        card.appendChild(link);
+
+        // append to the main grid
+        callback(card);
+
+}
+
+// funcion para hcaer el display
+function hacerDisplay( item , callback) {
+    // primero crearemos un simple grid
+    let flex = doc.createElement('div');
+    flex.classList.add('card');
+    flex.style.width = '80%';
+    flex.style.margin = '0 auto';
+    flex.style.padding = '30px 20px';
+    
+    // lña aiamgen
+    let img = doc.createElement('img');
+    img.src = item.image; // la fuente
+    img.classList.add('imgDisplay');
+    img.style.width = '70%';
+
+     // el titulo
+     let titulo = doc.createElement('h2');
+     titulo.classList.add('card-title'); 
+     titulo.textContent = item.title; // el titulo
+     titulo.style.margin = '17px 0';
+
+      // el id
+      let h3 = doc.createElement('h3');
+      h3.textContent = item.id; // el id del item
+
+      // la placa
+      let placa = doc.createElement('h4');
+      if( item.vegan == true || item.vegetarian == true)
+      {
+               placa.textContent = 'Veggie'; // si es veteriana/vegana
+      } else {
+               placa.textContent = 'Regular';
+      }
+
+      // el tiempo de preparacion
+      let h5 = doc.createElement('h5');
+      h5.textContent ='Time : ' + item.minutos + ' minutes.';
+      
+      // la receta como tal
+      let instructions= doc.createElement('div');
+      instructions.classList.add('card-content');
+      instructions.textContent = item.instructions;  // agregamos los pasos
+
+      // contruimos el flex
+      flex.appendChild(img);
+      flex.appendChild(titulo);
+      flex.appendChild(placa);
+      flex.appendChild(h5);  // minutos
+      flex.appendChild(instructions); // intrudcicones
+
+      callback(flex); // devolvemos el objeto completo
+}
+   </script>
+
+</body>
+</html>
